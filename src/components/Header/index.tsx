@@ -1,6 +1,4 @@
 import React from "react";
-import styles from "./index.module.scss";
-import cn from "classnames";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -11,24 +9,24 @@ interface Props {
 export const Header: React.FC<Props> = ({ className }) => {
   return (
     <header className={className}>
-      <nav className={"navbar navbar-expand-lg navbar-light bg-light"}>
-        <div className={"container-fluid container-xl"}>
-          <Link href={"/"} className={"navbar-brand"}>
+      <nav className="navbar navbar-expand-lg navbar-light bg-light">
+        <div className="container-fluid container-xl">
+          <Link href="/" className="navbar-brand">
             <Image
-              src={"/icons/main_logo.svg"}
-              alt={"main_logo"}
+              src="/icons/main_logo.svg"
+              alt="main_logo"
               width={150}
-              height={100}
+              height={50}
             />
           </Link>
-          <ul className={"navbar-nav ms-auto"}>
-            <li className={"nav-item"}>
-              <Link href={"/detailed-weather-forecast"} className={"nav-link"}>
-                Прогноз погоды на неделю
+          <ul className="navbar-nav ms-auto d-flex flex-row">
+            <li className="nav-item me-3">
+              <Link href="/forecast" className="nav-link">
+                Прогноз
               </Link>
             </li>
-            <li className={"nav-item"}>
-              <Link href={"/favorites"} className={"nav-link"}>
+            <li className="nav-item">
+              <Link href="/favorites" className="nav-link">
                 Избранное
               </Link>
             </li>
