@@ -22,12 +22,12 @@ export const Header: React.FC<Props> = ({ className }) => {
           <ul className="navbar-nav ms-auto d-flex flex-row">
             <li className="nav-item me-3">
               <Link href="/forecast" className="nav-link">
-                Прогноз
+                Forecast
               </Link>
             </li>
             <li className="nav-item">
               <Link href="/favorites" className="nav-link">
-                Избранное
+                Favorites
               </Link>
             </li>
           </ul>

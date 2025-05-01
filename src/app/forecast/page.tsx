@@ -1,100 +1,125 @@
 "use client";
 
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState, useMemo } from "react";
+import axios, { AxiosError, HttpStatusCode } from "axios";
 import Image from "next/image";
+import { weatherApi } from "@/api";
+import { ForecastType } from "@/types/weather.types";
+import { groupForecastByDay } from "@/helpers/groupForecastByDate";
+import { useDebounce } from "@/shared/hooks/useDebounce";
+import styles from "./page.module.scss";
 
-type ForecastItem = {
-  dt: number;
-  dt_txt: string;
-  main: { temp: number };
-  weather: { icon: string; description: string }[];
+const isAxiosError = (e: unknown): e is InstanceType<typeof AxiosError> => {
+  return axios.isAxiosError(e);
 };
 
 export default function DetailedWeatherForecast() {
-  const [city, setCity] = useState("");
-  const [forecast, setForecast] = useState<ForecastItem[]>([]);
+  const [searchValue, setSearchValue] = useState("");
+  const debouncedValue = useDebounce(searchValue, 1000);
+  const [city, setCity] = useState<string | null>(null);
+  const [forecast, setForecast] = useState<ForecastType[]>([]);
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchWeatherForecast = async (cityName: string) => {
-    const { data } = await axios.get(
-      "https://api.openweathermap.org/data/2.5/forecast",
-      {
-        params: {
-          q: cityName,
-          units: "metric",
-          lang: "en",
-          appid: "a9968cffa2bf58395661bbb501750994",
-        },
-      },
-    );
-    setForecast(data.list);
+    setIsPending(true);
+    setError(null);
+    setForecast([]);
+    try {
+      const { data } = await weatherApi.getForecast(cityName);
+      setCity(data.city.name);
+      setForecast(data.list);
+    } catch (e) {
+      if (isAxiosError(e) && e.status === HttpStatusCode.NotFound) {
+        setError("City not found");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+      setCity(null);
+    } finally {
+      setIsPending(false);
+    }
   };
 
-  const groupByDay = (list: ForecastItem[]) =>
-    list.reduce<Record<string, ForecastItem[]>>((acc, item) => {
-      const [date] = item.dt_txt.split(" ");
-      if (!acc[date]) acc[date] = [];
-      acc[date].push(item);
-      return acc;
-    }, {});
+  useEffect(() => {
+    if (debouncedValue) fetchWeatherForecast(debouncedValue);
+  }, [debouncedValue]);
 
-  const grouped = groupByDay(forecast);
+  const grouped = useMemo(() => groupForecastByDay(forecast), [forecast]);
 
   return (
     <div className="container py-4">
-      <form
-        className="row g-2 align-items-center justify-content-center mb-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          fetchWeatherForecast(city);
-        }}
-      >
+      <div className="row justify-content-center mb-4">
         <div className="col-12 col-md-8">
           <input
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="City"
-            className="form-control"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Search city for forecast..."
+            className={`form-control form-control-lg shadow ${styles.searchInput}`}
           />
         </div>
-        <div className="col-12 col-md-4">
-          <button type="submit" className="btn btn-primary w-100">
-            Search
-          </button>
+      </div>
+      {isPending && (
+        <div className="row justify-content-center">
+          <div className="col-auto d-flex align-items-center">
+            <div className="spinner-border text-info me-2" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <span className="text-info">Loading forecast...</span>
+          </div>
         </div>
-      </form>
-
-      {Object.entries(grouped).map(([date, items]) => {
-        const weekday = new Date(date).toLocaleDateString("en-EN", {
-          weekday: "long",
-        });
-        return (
-          <section key={date} className="mb-5">
-            <h4 className="text-capitalize mb-3">{weekday}</h4>
-            <div className="row row-cols-2 row-cols-sm-4 g-3">
-              {items.map((item) => {
-                const time = item.dt_txt.split(" ")[1].slice(0, 5);
-                return (
-                  <div key={item.dt} className="col">
-                    <div className="card text-center">
-                      <div className="card-body p-2">
-                        <small className="d-block mb-1">{time}</small>
-                        <Image
-                          src={`https://openweathermap.org/img/wn/${item.weather[0].icon}.png`}
-                          alt={item.weather[0].description}
-                          width={50}
-                          height={50}
-                        />
-                        <p className="mb-0">{Math.round(item.main.temp)}°C</p>
-                      </div>
+      )}
+      {error && (
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-6">
+            <div className="alert alert-danger text-center" role="alert">
+              {error}
+            </div>
+          </div>
+        </div>
+      )}
+      {city && !error && (
+        <div className="row justify-content-center mb-3">
+          <h2 className={`text-center ${styles.cityTitle}`}>
+            Forecast for {city}
+          </h2>
+        </div>
+      )}
+      {grouped.map(({ date, weekday, forecastList }) => (
+        <section key={date} className="mb-5">
+          <h4
+            className={`text-capitalize mb-3 border-bottom pb-2 ${styles.weekday}`}
+          >
+            {weekday}
+          </h4>
+          <div className="row row-cols-2 row-cols-sm-4 g-4">
+            {forecastList.map((f) => {
+              const time = f.dt_txt.split(" ")[1].slice(0, 5);
+              return (
+                <div key={f.dt} className="col">
+                  <div
+                    className={`card text-center h-100 shadow-sm ${styles.card}`}
+                  >
+                    <div className="card-body p-3">
+                      <small className="d-block mb-2 text-muted">{time}</small>
+                      <Image
+                        src={`https://openweathermap.org/img/wn/${f.weather[0].icon}@2x.png`}
+                        alt={f.weather[0].description}
+                        width={60}
+                        height={60}
+                      />
+                      <p className="h5 my-2">{Math.round(f.main.temp)}°C</p>
+                      <p className="small text-secondary">
+                        {f.weather[0].description}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

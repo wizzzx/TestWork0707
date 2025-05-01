@@ -7,6 +7,9 @@ import React from "react";
 import localFont from "next/font/local";
 import { Inter } from "next/font/google";
 import cn from "classnames";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import "@/shared/styles/globals.scss";
 
 const sfpro = localFont({
   variable: "--font-sfpro",
@@ -70,7 +73,11 @@ export default function RootLayout({
   return (
     <html lang={"en"} className={cn(sfpro.variable, inter.variable)}>
       <body className={`${sfpro.className} ${inter.className}`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <Header />
+          {children}
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

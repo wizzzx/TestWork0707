@@ -1,0 +1,1 @@
+export const WEATHER_APP_ID = "a9968cffa2bf58395661bbb501750994";
